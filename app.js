@@ -25,7 +25,7 @@ const ui = {
 const st = {
   img: null, iw: 0, ih: 0, s: 1, L: 0, T: 0, face: null,
   crown: null,               // центр і ширина корони в пікселях фото — їде разом із фото
-  showCrown: true, item: 'cake', theme: 'jet', target: 'photo', name: '', verse: DEF_VERSE, ref: DEF_REF,
+  showCrown: true, item: 'cake', theme: 'jet', target: 'photo', nameDy: 0, nameBox: null, name: '', verse: DEF_VERSE, ref: DEF_REF,
 };
 
 /* ── малюнки (ті самі шляхи, що в bold.html) ── */
@@ -146,7 +146,9 @@ function draw() {
   const name = (st.name.trim() || 'Ім\'я').toLocaleUpperCase('uk');
   let fs = 220; ctx.font = font(900, fs, NAME_FONT);
   while (ctx.measureText(name).width > 820 && fs > 60) { fs -= 4; ctx.font = font(900, fs, NAME_FONT); }
-  ctx.save(); ctx.translate(540, 1150 + fs * .47); ctx.rotate(-4 * DEG); ctx.transform(1, 0, Math.tan(-9 * DEG), 1, 0, 0);
+  const ny = 1150 + fs * .47 + st.nameDy;
+  st.nameBox = { y: ny, h: fs * .75, w: ctx.measureText(name).width };
+  ctx.save(); ctx.translate(540, ny); ctx.rotate(-4 * DEG); ctx.transform(1, 0, Math.tan(-9 * DEG), 1, 0, 0);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = th.name; ctx.globalAlpha = st.name.trim() ? 1 : .35;
   ctx.fillText(name, 0, 0); ctx.restore();
   ctx.save(); ctx.translate(540, 1290); ctx.rotate(-9 * DEG); ctx.fillStyle = th.orbit; ctx.fill(P.orbitFront); ctx.restore();
@@ -251,12 +253,16 @@ function hitCrown(p) {
   const c = crownScreen(); if (!c || !st.showCrown) return false;
   return Math.abs(p.x - c.x) < c.w * .65 && Math.abs(p.y - c.y) < c.w * .55;
 }
+function hitName(p) {
+  const b = st.nameBox; return !!b && Math.abs(p.y - b.y) < b.h * .6 && Math.abs(p.x - 540) < b.w / 2 + 40;
+}
+const moveName = dy => { st.nameDy = Math.max(-120, Math.min(120, st.nameDy + dy)); };
 const pair = () => { const [a, b] = [...ptrs.values()]; return { d: Math.hypot(a.x - b.x, a.y - b.y), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; };
 cv.addEventListener('pointerdown', e => {
   const p = toCanvas(e);
   if (!st.img) { if (p.y < FH) ui.file.click(); return; }
   cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, p);
-  if (ptrs.size === 1) { mode = hitCrown(p) ? 'crown' : (p.y < FH ? 'photo' : null); last = p; }
+  if (ptrs.size === 1) { mode = hitCrown(p) ? 'crown' : hitName(p) ? 'name' : (p.y < FH ? 'photo' : null); last = p; }
   else if (ptrs.size === 2) { mode = 'pinch'; pinch = { ...pair(), s: st.s }; }
   cv.classList.toggle('dragging', !!mode);
 });
@@ -264,6 +270,7 @@ cv.addEventListener('pointermove', e => {
   if (!ptrs.has(e.pointerId)) return;
   const p = toCanvas(e); ptrs.set(e.pointerId, p);
   if (mode === 'photo') { st.L += p.x - last.x; st.T += p.y - last.y; clampFrame(); last = p; redraw(); }
+  else if (mode === 'name') { moveName(p.y - last.y); last = p; redraw(); }
   else if (mode === 'crown') { st.crown.u += (p.x - last.x) / st.s; st.crown.v += (p.y - last.y) / st.s; last = p; redraw(); }
   else if (mode === 'pinch' && ptrs.size === 2) {
     const q = pair(); st.L += q.x - pinch.x; st.T += q.y - pinch.y; pinch.x = q.x; pinch.y = q.y;
@@ -283,11 +290,15 @@ cv.addEventListener('wheel', e => {
 ui.zoom.oninput = () => { zoomAt(smin() * +ui.zoom.value, 540, 650); redraw(); };
 ui.refit.onclick = () => { autoFrame(); redraw(); };
 
-/* ── стрелки: зсув фото або корони на 12 px (з Shift — на 48) ── */
+/* ── стрілки: фото й корона — на 12 px (з Shift на 48), ім'я — лише вгору-вниз на 6 px ── */
 function nudge(dx, dy, big) {
   if (!st.img) return;
   const k = big ? 48 : 12;
-  if (st.target === 'crown' && st.crown) {
+  if (st.target === 'name') {
+    if (dx) { setStatus('Ім\'я рухається лише вгору й вниз.', true); return; }
+    const y0 = st.nameDy; moveName(dy * (big ? 24 : 6));
+    if (st.nameDy === y0) setStatus('Далі ім\'я вже не зсунеш, інакше налізе на інші написи.', true);
+  } else if (st.target === 'crown' && st.crown) {
     st.crown.u += dx * k / st.s; st.crown.v += dy * k / st.s;
   } else {
     const L0 = st.L, T0 = st.T;
@@ -309,7 +320,8 @@ cv.addEventListener('keydown', e => {
   const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
   if (d) { e.preventDefault(); nudge(...d, e.shiftKey); }
 });
-document.querySelectorAll('input[name=target]').forEach(r => r.onchange = () => { st.target = r.value; });
+function syncPad() { document.querySelectorAll('.arr.left,.arr.right').forEach(b => b.disabled = !st.img || st.target === 'name'); }
+document.querySelectorAll('input[name=target]').forEach(r => r.onchange = () => { st.target = r.value; syncPad(); });
 document.querySelectorAll('input[name=bg]').forEach(r => r.onchange = () => { st.theme = r.value; redraw(); });
 
 /* ── поля ── */
@@ -320,6 +332,7 @@ function syncUi() {
   ui.saveHint.textContent = !st.img && !st.name.trim() ? 'Спершу додай фото й ім\'я' : !st.img ? 'Ще потрібне фото' : !st.name.trim() ? 'Ще потрібне ім\'я' : '1080 × 1920, PNG для сторіс';
   ui.zoom.disabled = ui.refit.disabled = !st.img;
   document.querySelectorAll('[data-nudge],input[name=target]').forEach(b => b.disabled = !st.img);
+  syncPad();
   ui.pickText.textContent = st.img ? 'Змінити фото' : 'Обрати фото';
   ui.refPreview.textContent = st.verse.trim() ? (st.ref.trim() || 'без посилання') : 'немає';
 }
