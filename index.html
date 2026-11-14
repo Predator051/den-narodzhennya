@@ -75,6 +75,23 @@ input[type=range]{width:100%;accent-color:var(--gold);height:28px}
 .seg input:checked+span{background:var(--gold);color:var(--jet)}
 .seg input:focus-visible+span{outline:2px solid var(--gold);outline-offset:-4px}
 
+.nudge-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px}
+.pad{display:grid;grid-template-columns:repeat(3,46px);grid-template-rows:repeat(3,40px);gap:4px}
+.arr{display:grid;place-items:center;background:var(--jet-2);border:1px solid var(--line);border-radius:10px;padding:0;touch-action:manipulation;user-select:none;-webkit-user-select:none;transition:background .15s,border-color .15s}
+.arr:hover:not(:disabled){border-color:var(--wis);background:var(--jet-3)}
+.arr:active:not(:disabled){background:var(--gold);border-color:var(--gold);color:var(--jet)}
+.arr:disabled{opacity:.35;cursor:not-allowed}
+.arr svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.arr.up{grid-area:1/2}.arr.left{grid-area:2/1}.arr.right{grid-area:2/3}.arr.down{grid-area:3/2}
+.seg input:disabled+span{opacity:.4}
+.swatches{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+.swatches label{position:relative;display:grid;justify-items:center;gap:6px;cursor:pointer}
+.swatches input{position:absolute;opacity:0;inset:0;cursor:pointer}
+.swatches span{width:46px;height:46px;border-radius:50%;background:var(--c);box-shadow:inset 0 0 0 1px rgba(238,248,255,.25);transition:box-shadow .15s}
+.swatches input:checked+span{box-shadow:inset 0 0 0 1px rgba(238,248,255,.25),0 0 0 3px var(--jet),0 0 0 5px var(--gold)}
+.swatches input:focus-visible+span{outline:2px solid var(--gold);outline-offset:6px}
+.swatches em{font-style:normal;font-size:13px;color:var(--muted)}
+.swatches input:checked~em{color:var(--alice);font-weight:600}
 details{border-top:1px solid var(--line);padding-top:14px}
 summary{cursor:pointer;font-weight:600;font-size:15px;list-style:none;display:flex;align-items:center;gap:8px}
 summary::-webkit-details-marker{display:none}
@@ -131,9 +148,32 @@ details .stack{display:grid;gap:10px}
     <div class="field">
       <span class="label">Кадр</span>
       <input type="range" id="zoom" min="1" max="4" step="0.01" value="1" aria-label="Масштаб фото" disabled>
-      <span class="hint">Фото й корону можна тягнути пальцем або мишкою.</span>
+      <span class="hint">Фото й корону можна тягнути пальцем або мишкою, а точно підправити стрілками.</span>
+      <div class="nudge-row">
+        <div class="seg" role="radiogroup" aria-label="Що рухати стрілками">
+          <label><input type="radio" name="target" value="photo" checked disabled><span>Фото</span></label>
+          <label><input type="radio" name="target" value="crown" disabled><span>Корону</span></label>
+        </div>
+        <div class="pad" role="group" aria-label="Зсунути">
+          <button type="button" class="arr up" data-nudge="0,-1" aria-label="Вгору" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button>
+          <button type="button" class="arr left" data-nudge="-1,0" aria-label="Вліво" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+          <button type="button" class="arr right" data-nudge="1,0" aria-label="Вправо" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+          <button type="button" class="arr down" data-nudge="0,1" aria-label="Вниз" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+        </div>
+      </div>
       <button type="button" class="link" id="refit" disabled>Поставити кадр по обличчю</button>
     </div>
+
+    <fieldset class="field">
+      <legend class="label">Колір тла</legend>
+      <div class="swatches" role="radiogroup" aria-label="Колір тла">
+        <label title="Темно-синій"><input type="radio" name="bg" value="jet" checked><span style="--c:#172332"></span><em>Темний</em></label>
+        <label title="Бордовий"><input type="radio" name="bg" value="oxblood"><span style="--c:#96130D"></span><em>Бордо</em></label>
+        <label title="Лавандовий"><input type="radio" name="bg" value="wisteria"><span style="--c:#8297BF"></span><em>Лаванда</em></label>
+        <label title="Золотий"><input type="radio" name="bg" value="gold"><span style="--c:#F9DC5C"></span><em>Золото</em></label>
+        <label title="Світлий"><input type="radio" name="bg" value="alice"><span style="--c:#EEF8FF"></span><em>Світлий</em></label>
+      </div>
+    </fieldset>
 
     <fieldset class="field">
       <legend class="label">Прикраси</legend>

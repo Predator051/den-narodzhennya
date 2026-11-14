@@ -1,6 +1,15 @@
 // Генератор сторіс «З днем народження» (варіант «Орбіта»). Малює все на canvas 1080×1920.
 const W = 1080, H = 1920, FH = 1300;               // FH — висота фото згори
-const JET = '#172332', ALICE = '#EEF8FF', GOLD = '#F9DC5C';
+const JET = '#172332', ALICE = '#EEF8FF', GOLD = '#F9DC5C', OX = '#96130D', WIS = '#8297BF';
+// тло і кольори тексту під нього (палітра «Платформи»); на бордо — лише золото, без білого
+const THEMES = {
+  jet:      { bg: JET,   name: ALICE, label: GOLD, verse: 'rgba(238,248,255,.92)', orbit: GOLD, doodle: ALICE },
+  oxblood:  { bg: OX,    name: GOLD,  label: GOLD, verse: 'rgba(249,220,92,.95)',  orbit: GOLD, doodle: GOLD },
+  wisteria: { bg: WIS,   name: JET,   label: JET,  verse: JET,                     orbit: GOLD, doodle: JET },
+  gold:     { bg: GOLD,  name: JET,   label: JET,  verse: JET,                     orbit: JET,  doodle: JET },
+  alice:    { bg: ALICE, name: JET,   label: JET,  verse: JET,                     orbit: JET,  doodle: JET },
+};
+const rgba = (hex, a) => `rgba(${[1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)).join(',')},${a})`;
 const DEG = Math.PI / 180;
 const DEF_VERSE = '«Господь тебе збереже від усякого зла, твою душу збереже! Господь стерегтиме вихід твій та вхід твій відтепер аж навіки!»';
 const DEF_REF = 'Псалом 121:7–8';
@@ -16,7 +25,7 @@ const ui = {
 const st = {
   img: null, iw: 0, ih: 0, s: 1, L: 0, T: 0, face: null,
   crown: null,               // центр і ширина корони в пікселях фото — їде разом із фото
-  showCrown: true, item: 'cake', name: '', verse: DEF_VERSE, ref: DEF_REF,
+  showCrown: true, item: 'cake', theme: 'jet', target: 'photo', name: '', verse: DEF_VERSE, ref: DEF_REF,
 };
 
 /* ── малюнки (ті самі шляхи, що в bold.html) ── */
@@ -90,20 +99,21 @@ function wrap(text, maxW) {
 
 /* ── малювання ── */
 function draw() {
+  const th = THEMES[st.theme];
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.fillStyle = JET; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = th.bg; ctx.fillRect(0, 0, W, H);
 
   // фото + затемнення
   ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, FH); ctx.clip();
   if (st.img) {
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(st.img, st.L, st.T, st.iw * st.s, st.ih * st.s);
-  } else emptyPhoto();
+  } else emptyPhoto(th);
   let g = ctx.createLinearGradient(0, 0, 0, 300);
   g.addColorStop(0, 'rgba(23,35,50,.55)'); g.addColorStop(1, 'rgba(23,35,50,0)');
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, 300);
   g = ctx.createLinearGradient(0, 0, 0, FH);
-  g.addColorStop(.58, 'rgba(23,35,50,0)'); g.addColorStop(.82, 'rgba(23,35,50,.8)'); g.addColorStop(1, JET);
+  g.addColorStop(.58, rgba(th.bg, 0)); g.addColorStop(.82, rgba(th.bg, .8)); g.addColorStop(1, th.bg);
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, FH);
   ctx.restore();
 
@@ -115,7 +125,7 @@ function draw() {
 
   // торт / подарунок
   ctx.save(); ctx.translate(946, 1730); ctx.rotate(12 * DEG); ctx.translate(-100, -100);
-  ctx.strokeStyle = ALICE; ctx.lineWidth = st.item === 'cake' ? 6 : 7; ctx.lineCap = ctx.lineJoin = 'round';
+  ctx.strokeStyle = th.doodle; ctx.lineWidth = st.item === 'cake' ? 6 : 7; ctx.lineCap = ctx.lineJoin = 'round';
   P[st.item].forEach(p => ctx.stroke(p)); ctx.restore();
 
   // корона
@@ -127,20 +137,20 @@ function draw() {
   }
 
   // іскра біля імені, задня частина орбіти
-  ctx.save(); ctx.translate(110, 1210); ctx.scale(.74, .74); ctx.fillStyle = GOLD; ctx.fill(P.spark); ctx.restore();
+  ctx.save(); ctx.translate(110, 1210); ctx.scale(.74, .74); ctx.fillStyle = th.orbit; ctx.fill(P.spark); ctx.restore();
   ctx.save(); ctx.translate(540, 1290); ctx.rotate(-9 * DEG);
-  ctx.beginPath(); ctx.ellipse(0, 0, 470, 112, 0, Math.PI, 2 * Math.PI); ctx.strokeStyle = GOLD; ctx.lineWidth = 4; ctx.stroke(); ctx.restore();
+  ctx.beginPath(); ctx.ellipse(0, 0, 470, 112, 0, Math.PI, 2 * Math.PI); ctx.strokeStyle = th.orbit; ctx.lineWidth = 4; ctx.stroke(); ctx.restore();
 
   // «Платформа вітає / ІМ'Я / з днем народження»
-  tracked('ПЛАТФОРМА ВІТАЄ', font(600, 40), 8.8, 540, 1121, -4 * DEG, -10 * DEG);
+  tracked('ПЛАТФОРМА ВІТАЄ', font(600, 40), 8.8, 540, 1121, -4 * DEG, -10 * DEG, th.label);
   const name = (st.name.trim() || 'Ім\'я').toLocaleUpperCase('uk');
   let fs = 220; ctx.font = font(900, fs, NAME_FONT);
   while (ctx.measureText(name).width > 820 && fs > 60) { fs -= 4; ctx.font = font(900, fs, NAME_FONT); }
   ctx.save(); ctx.translate(540, 1150 + fs * .47); ctx.rotate(-4 * DEG); ctx.transform(1, 0, Math.tan(-9 * DEG), 1, 0, 0);
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = ALICE; ctx.globalAlpha = st.name.trim() ? 1 : .35;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = th.name; ctx.globalAlpha = st.name.trim() ? 1 : .35;
   ctx.fillText(name, 0, 0); ctx.restore();
-  ctx.save(); ctx.translate(540, 1290); ctx.rotate(-9 * DEG); ctx.fillStyle = GOLD; ctx.fill(P.orbitFront); ctx.restore();
-  tracked('З ДНЕМ НАРОДЖЕННЯ', font(600, 40), 8.8, 540, 1449, -4 * DEG, -10 * DEG);
+  ctx.save(); ctx.translate(540, 1290); ctx.rotate(-9 * DEG); ctx.fillStyle = th.orbit; ctx.fill(P.orbitFront); ctx.restore();
+  tracked('З ДНЕМ НАРОДЖЕННЯ', font(600, 40), 8.8, 540, 1449, -4 * DEG, -10 * DEG, th.label);
 
   // вірш
   const verse = st.verse.trim(), ref = st.ref.trim().toLocaleUpperCase('uk');
@@ -151,18 +161,18 @@ function draw() {
       total = lines.length * lh + (ref ? 16 + 36 : 0);
       if (total <= 250 || vf <= 24) break;
     }
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgba(238,248,255,.92)';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = th.verse;
     lines.forEach((l, i) => ctx.fillText(l, 540, 1516 + lh * (i + .5)));
-    if (ref) tracked(ref, font(600, 28), 3.36, 540, 1516 + lines.length * lh + 16 + 18);
+    if (ref) tracked(ref, font(600, 28), 3.36, 540, 1516 + lines.length * lh + 16 + 18, 0, 0, th.label);
   }
 
   // логотип
   if (logo.complete && logo.naturalWidth) ctx.drawImage(logo, 96, 228, 104 * logo.naturalWidth / logo.naturalHeight, 104);
 }
 
-function emptyPhoto() {
+function emptyPhoto(th) {
   const g = ctx.createLinearGradient(0, 0, 0, FH);
-  g.addColorStop(0, '#2A3B54'); g.addColorStop(1, JET);
+  g.addColorStop(0, '#2A3B54'); g.addColorStop(.75, rgba(th.bg, .9)); g.addColorStop(1, th.bg);
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, FH);
   ctx.save(); ctx.translate(540, 560); ctx.strokeStyle = 'rgba(238,248,255,.75)'; ctx.lineWidth = 7; ctx.lineCap = ctx.lineJoin = 'round';
   P.upload.forEach(p => ctx.stroke(p)); ctx.restore();
@@ -273,6 +283,35 @@ cv.addEventListener('wheel', e => {
 ui.zoom.oninput = () => { zoomAt(smin() * +ui.zoom.value, 540, 650); redraw(); };
 ui.refit.onclick = () => { autoFrame(); redraw(); };
 
+/* ── стрелки: зсув фото або корони на 12 px (з Shift — на 48) ── */
+function nudge(dx, dy, big) {
+  if (!st.img) return;
+  const k = big ? 48 : 12;
+  if (st.target === 'crown' && st.crown) {
+    st.crown.u += dx * k / st.s; st.crown.v += dy * k / st.s;
+  } else {
+    const L0 = st.L, T0 = st.T;
+    st.L += dx * k; st.T += dy * k; clampFrame();
+    if (st.L === L0 && st.T === T0) setStatus(dx ? 'Фото вже впирається в край. Збільш його повзунком «Масштаб», тоді можна буде зсунути вбік.' : 'Фото вже впирається в край. Збільш його повзунком «Масштаб», тоді можна буде зсунути вгору чи вниз.', true);
+  }
+  redraw();
+}
+let rep = 0;
+document.querySelectorAll('[data-nudge]').forEach(b => {
+  const [dx, dy] = b.dataset.nudge.split(',').map(Number);
+  const stop = () => { clearTimeout(rep); clearInterval(rep); };
+  b.addEventListener('pointerdown', e => { e.preventDefault(); nudge(dx, dy, e.shiftKey); stop(); rep = setTimeout(() => { rep = setInterval(() => nudge(dx, dy, e.shiftKey), 60); }, 380); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => b.addEventListener(t, stop));
+  b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nudge(dx, dy, e.shiftKey); } });
+});
+cv.tabIndex = 0;
+cv.addEventListener('keydown', e => {
+  const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+  if (d) { e.preventDefault(); nudge(...d, e.shiftKey); }
+});
+document.querySelectorAll('input[name=target]').forEach(r => r.onchange = () => { st.target = r.value; });
+document.querySelectorAll('input[name=bg]').forEach(r => r.onchange = () => { st.theme = r.value; redraw(); });
+
 /* ── поля ── */
 ui.verse.value = DEF_VERSE; ui.ref.value = DEF_REF;
 function syncUi() {
@@ -280,6 +319,7 @@ function syncUi() {
   ui.save.disabled = !ready;
   ui.saveHint.textContent = !st.img && !st.name.trim() ? 'Спершу додай фото й ім\'я' : !st.img ? 'Ще потрібне фото' : !st.name.trim() ? 'Ще потрібне ім\'я' : '1080 × 1920, PNG для сторіс';
   ui.zoom.disabled = ui.refit.disabled = !st.img;
+  document.querySelectorAll('[data-nudge],input[name=target]').forEach(b => b.disabled = !st.img);
   ui.pickText.textContent = st.img ? 'Змінити фото' : 'Обрати фото';
   ui.refPreview.textContent = st.verse.trim() ? (st.ref.trim() || 'без посилання') : 'немає';
 }
@@ -311,6 +351,7 @@ await Promise.all([
 draw(); syncUi();
 // для перевірки: ?photo=_test/x.jpg&name=Даню (лише файли з цього ж сайту)
 const qs = new URLSearchParams(location.search);
+if (THEMES[qs.get('bg')]) { st.theme = qs.get('bg'); document.querySelector(`input[name=bg][value=${st.theme}]`).checked = true; }
 if (qs.get('name')) { ui.name.value = qs.get('name'); ui.name.oninput(); }
 if (qs.get('photo') && !/^[a-z]+:/i.test(qs.get('photo'))) usePhoto(qs.get('photo'));
 if (qs.get('raw')) { document.querySelector('.panel').style.display = 'none'; Object.assign(cv.style, { position: 'fixed', left: 0, top: 0, width: '1080px', height: '1920px', zIndex: 9 }); }
