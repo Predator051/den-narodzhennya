@@ -136,8 +136,7 @@ function draw() {
     P.crown.forEach(p => ctx.stroke(p)); ctx.restore();
   }
 
-  // іскра біля імені, задня частина орбіти
-  ctx.save(); ctx.translate(110, 1210); ctx.scale(.74, .74); ctx.fillStyle = th.orbit; ctx.fill(P.spark); ctx.restore();
+  // задня частина орбіти
   ctx.save(); ctx.translate(540, 1290); ctx.rotate(-9 * DEG);
   ctx.beginPath(); ctx.ellipse(0, 0, 470, 112, 0, Math.PI, 2 * Math.PI); ctx.strokeStyle = th.orbit; ctx.lineWidth = 4; ctx.stroke(); ctx.restore();
 
@@ -151,6 +150,13 @@ function draw() {
   ctx.save(); ctx.translate(540, ny); ctx.rotate(-4 * DEG); ctx.transform(1, 0, Math.tan(-9 * DEG), 1, 0, 0);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = th.name; ctx.globalAlpha = st.name.trim() ? 1 : .35;
   ctx.fillText(name, 0, 0); ctx.restore();
+  // іскра зліва від імені, поверх усього: не ховається за довгим ім'ям і їде разом з ним
+  {
+    const k = Math.max(.6, Math.min(1, fs / 220)), r = 37 * k;
+    const sx = Math.max(r + 14, 540 - st.nameBox.w / 2 - r - 22);
+    const sy = ny + Math.sin(4 * DEG) * (540 - sx) - fs * .1;
+    ctx.save(); ctx.translate(sx - r, sy - r); ctx.scale(.74 * k, .74 * k); ctx.fillStyle = th.orbit; ctx.fill(P.spark); ctx.restore();
+  }
   ctx.save(); ctx.translate(540, 1290); ctx.rotate(-9 * DEG); ctx.fillStyle = th.orbit; ctx.fill(P.orbitFront); ctx.restore();
   tracked('З ДНЕМ НАРОДЖЕННЯ', font(600, 40), 8.8, 540, 1449, -4 * DEG, -10 * DEG, th.label);
 
